@@ -5,6 +5,11 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.Map.Entry;
+
+import com.sun.org.apache.xerces.internal.util.SynchronizedSymbolTable;
+
+import java.util.Scanner;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
@@ -16,6 +21,7 @@ public class Tokenizer {
 		
 		StopWords stopWords = new StopWords();
 		//stopWords.printStopWords();
+		PorterStemmer stemmer = new PorterStemmer();
 		
 		File filePath = new File("resources\\wikiFiles");
 		TreeMap<String, TreeMap<String,DocumentLink>> database = new TreeMap<>();
@@ -30,26 +36,38 @@ public class Tokenizer {
 				in.close();
 				//save it to a bin tree.
 				StringTokenizer st = new StringTokenizer(str.toString());//create a string
+				int wordCount = st.countTokens();
 				while(st.hasMoreTokens()){
 					nextLine = st.nextToken();
 					if(nextLine.matches("[a-zA-Z'.]*") && !stopWords.contains(nextLine)) {
 						/* String Formatting */
 						nextLine = nextLine.toLowerCase();
-						if(nextLine.contains("."))
+						if(nextLine.contains(".") || nextLine.contains(","))
 							nextLine = (String) nextLine.subSequence(0, nextLine.length()-1);
 						if(nextLine.contains("'s"))
 							nextLine = (String) nextLine.substring(0, nextLine.length()-2);
+						if(nextLine.contains("'") && nextLine.length() > 1) {
+//							System.out.println(nextLine);
+							if(nextLine.charAt(0) == '\'')
+								nextLine = (String) nextLine.substring(1, nextLine.length());
+							if(nextLine.charAt(0) == '\'')
+								nextLine = (String) nextLine.substring(1, nextLine.length());
+							if(nextLine.charAt(nextLine.length()-1) == '\'')
+								nextLine = (String) nextLine.substring(0, nextLine.length()-1);
+//							System.out.println(nextLine);
+						}
+						//nextLine = stemmer.stem(nextLine);
 						/* Check if the keyword already exists */
 						if(database.containsKey(nextLine)) {
 							if(database.get(nextLine).containsKey(f.getPath()))
 								database.get(nextLine).get(f.getPath()).incrementKeywordFrequency();
 							else {
-								database.get(nextLine).put(f.getPath(), new DocumentLink(counter));
+								database.get(nextLine).put(f.getPath(), new DocumentLink(wordCount, counter));
 							}
 						}
 						else {
 							TreeMap<String, DocumentLink> newMap = new TreeMap<>();
-							newMap.put(f.getPath(), new DocumentLink(counter));
+							newMap.put(f.getPath(), new DocumentLink(wordCount, counter));
 							database.put(nextLine, newMap);
 						}
 						//System.out.println(nextLine);
@@ -61,6 +79,54 @@ public class Tokenizer {
 			//System.out.println(f.getPath());
 			counter++;
 		}
-		System.out.println("DONE");
+		counter -= 1;
+		System.out.println("COUNTER = " + counter);
+		System.out.println("DONE WITH THAT DATA");
+		
+		while(true) {
+			Scanner query = new Scanner(System.in);
+			TreeMap<String, Double> scores = new TreeMap<>(); 
+			while(query.hasNext()) {
+				String word = query.next();
+				if(word.equals("quit")) {
+					query.close();
+					return;
+				}
+				//System.out.println(word);
+				TreeMap<String, DocumentLink> docs = database.get(word);
+				for(Entry<String, DocumentLink> entry : docs.entrySet()) {
+					if(scores.containsKey(entry.getKey())) {
+						Entry<String, Double> currentDocument = scores.ceilingEntry(entry.getKey());
+						Double newScore = scores.get(entry.getKey()) + calculateScore(word, entry.getValue());
+						currentDocument.setValue(newScore);
+					}
+					else
+						scores.put(entry.getKey(), calculateScore(word, entry.getValue()));
+				} 
+			}
+			System.out.println(scores.size());
+		}
 	}
+	
+	private static double calculateScore(String word, DocumentLink doc) {
+		double termFrequency = ((double)doc.getKeywordFrequency()/(double)doc.getWordCount());
+		double inverseDocumentFrequency = (Math.log(((double)doc.getKeywordFrequency() / (double)doc.getWordCount()))/Math.log(2.0));
+		double queryScore = (termFrequency * inverseDocumentFrequency);
+		return queryScore;
+	}
+	
+//	private double Score(String query, DocumentLink doc, int docTotal, int keywordDocTotal) {
+//		StringTokenizer queryWords = new StringTokenizer(query.toString());
+//		String word = "";
+//		double queryScore = 0.0;
+//		double termFrequency = 0.0;
+//		double inverseDocumentFrequency = 0.0;
+//		while(queryWords.hasMoreTokens()) {
+//			word = queryWords.nextToken();
+//			termFrequency = ((double)doc.getKeywordFrequency()/(double)doc.getWordCount());
+//			inverseDocumentFrequency = (Math.log(((double) docTotal / (double) keywordDocTotal))/Math.log(2.0));
+//			queryScore += (termFrequency * inverseDocumentFrequency);
+//		}
+//		return queryScore;
+//	}
 }
