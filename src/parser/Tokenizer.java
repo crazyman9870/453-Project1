@@ -83,15 +83,16 @@ public class Tokenizer {
 		System.out.println("COUNTER = " + counter);
 		System.out.println("DONE WITH THAT DATA");
 		
+		Scanner scan = new Scanner(System.in);
 		while(true) {
-			System.out.println("HERE");
-			Scanner query = new Scanner(System.in);
-			ResultSet scores = new ResultSet(); 
-			while(query.hasNext()) {
-				System.out.println("STARTING WHILE");
-				String word = query.next();
+//			System.out.println("HERE");
+			ResultSet scores = new ResultSet();
+			StringTokenizer query = new StringTokenizer(scan.nextLine());//create a string
+			while(query.hasMoreTokens()) {
+//				System.out.println("STARTING WHILE");
+				String word = query.nextToken();
 				if(word.equals("quit")) {
-					query.close();
+					scan.close();
 					return;
 				}
 				System.out.println(word);
@@ -102,11 +103,10 @@ public class Tokenizer {
 					else
 						scores.addNode(entry.getKey(), calculateScore(word, entry.getValue(), counter, docs.size()));
 				}
-				System.out.println("OUT OF FOR");
+				//System.out.println("OUT OF FOR");
 				System.out.println(scores.getSize());
 				
 			}
-			query.close();
 			scores.printTopTenResults();
 		}
 	}
@@ -114,6 +114,7 @@ public class Tokenizer {
 	private static double calculateScore(String word, DocumentLink doc, int docTotal, int keywordDocTotal) {
 		double termFrequency = ((double)doc.getKeywordFrequency()/(double)doc.getWordCount());
 		double inverseDocumentFrequency = (Math.log(((double) docTotal / (double) keywordDocTotal))/Math.log(2.0));
+		System.out.println(inverseDocumentFrequency);
 		double queryScore = (termFrequency * inverseDocumentFrequency);
 		return queryScore;
 	}
