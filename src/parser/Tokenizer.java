@@ -84,36 +84,41 @@ public class Tokenizer {
 		System.out.println("DONE WITH THAT DATA");
 		
 		while(true) {
+			System.out.println("HERE");
 			Scanner query = new Scanner(System.in);
-			TreeMap<String, Double> scores = new TreeMap<>(); 
+			ResultSet scores = new ResultSet(); 
 			while(query.hasNext()) {
+				System.out.println("STARTING WHILE");
 				String word = query.next();
 				if(word.equals("quit")) {
 					query.close();
 					return;
 				}
-				//System.out.println(word);
+				System.out.println(word);
 				TreeMap<String, DocumentLink> docs = database.get(word);
 				for(Entry<String, DocumentLink> entry : docs.entrySet()) {
-					if(scores.containsKey(entry.getKey())) {
-						Entry<String, Double> currentDocument = scores.ceilingEntry(entry.getKey());
-						Double newScore = scores.get(entry.getKey()) + calculateScore(word, entry.getValue());
-						currentDocument.setValue(newScore);
-					}
+					if(scores.containsKey(entry.getKey()))
+						scores.updateScore(entry.getKey(), calculateScore(word, entry.getValue(), counter, docs.size()));
 					else
-						scores.put(entry.getKey(), calculateScore(word, entry.getValue()));
-				} 
+						scores.addNode(entry.getKey(), calculateScore(word, entry.getValue(), counter, docs.size()));
+				}
+				System.out.println("OUT OF FOR");
+				System.out.println(scores.getSize());
+				
 			}
-			System.out.println(scores.size());
+			query.close();
+			scores.printTopTenResults();
 		}
 	}
 	
-	private static double calculateScore(String word, DocumentLink doc) {
+	private static double calculateScore(String word, DocumentLink doc, int docTotal, int keywordDocTotal) {
 		double termFrequency = ((double)doc.getKeywordFrequency()/(double)doc.getWordCount());
-		double inverseDocumentFrequency = (Math.log(((double)doc.getKeywordFrequency() / (double)doc.getWordCount()))/Math.log(2.0));
+		double inverseDocumentFrequency = (Math.log(((double) docTotal / (double) keywordDocTotal))/Math.log(2.0));
 		double queryScore = (termFrequency * inverseDocumentFrequency);
 		return queryScore;
 	}
+	
+	
 	
 //	private double Score(String query, DocumentLink doc, int docTotal, int keywordDocTotal) {
 //		StringTokenizer queryWords = new StringTokenizer(query.toString());
